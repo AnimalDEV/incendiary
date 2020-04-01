@@ -14,10 +14,23 @@ export class Schema {
 	}
 
 	validate(data: { [key: string]: any }): { [key: string]: any } {
-		for (const [key, value] of Object.entries(this.properties)) {
-			value.validate(key, data[key]);
-		}
 		return data;
+	}
+
+	get model() {
+		const handler: ProxyHandler<any> = {
+			get(target: any, key: string): any {
+				if (target[key] instanceof _Object) {
+					return new Proxy(target[key].options.properties, handler);
+				}
+			},
+			set(target: any, key: string, value: any) {
+				target[key].validate(key, value);
+				target[key] = value;
+				return true;
+			}
+		};
+		return new Proxy(this.properties, handler);
 	}
 
 	static normalize(schema: { [key: string]: any }): { [key: string]: Type } {
